@@ -5,3 +5,6 @@ from django.shortcuts import render
 
 def hola_mundo(request):
     return HttpResponse('Hola Mundo Django')
+
+def saludar(request, nombre="Pepe"):
+    return HttpResponse(f"Hola Mundo - {nombre}")
