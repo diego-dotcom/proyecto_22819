@@ -8,6 +8,12 @@ from cac.forms import ContactoForm
 
 from django.contrib import messages
 
+from django.views.generic import ListView, View
+
+
+from cac.models import Categoria
+from cac.forms import ContactoForm, CategoriaForm, CategoriaFormValidado
+
 # Create your views here.
 
 def index(request):
@@ -47,9 +53,6 @@ def index(request):
     return render(request,'cac/publica/index.html',
                 {'cursos':listado_cursos,'contacto_form':contacto_form})
     
-
-    
-
 def quienes_somos(request):
     # return redirect('saludar_por_defecto')
     # return redirect(reverse('saludar', kwargs={'nombre': 'Diego'}))
@@ -105,6 +108,72 @@ def api_proyectos(request,):
     response = {'status':'Ok','code':200,'message':'Listado de proyectos','data':proyectos}
     return JsonResponse(response,safe=False)
 
+
+def categorias_index(request):
+    #queryset
+    categorias = Categoria.objects.filter(baja=False)
+    return render(request,'cac/administracion/categorias/index.html',{'categorias':categorias})
+
+def categorias_nuevo(request):
+    if(request.method=='POST'):
+        formulario = CategoriaFormValidado(request.POST)
+        if formulario.is_valid():
+            formulario.save()
+            return redirect('categorias_index')
+    else:
+        formulario = CategoriaFormValidado()
+    return render(request,'cac/administracion/categorias/nuevo.html',{'formulario':formulario})
+
+
+def categorias_editar(request,id_categoria):
+    try:
+        categoria = Categoria.objects.get(pk=id_categoria)
+    except Categoria.DoesNotExist:
+        return render(request,'cac/administracion/404_admin.html')
+
+    if(request.method=='POST'):
+        formulario = CategoriaFormValidado(request.POST,instance=categoria)
+        if formulario.is_valid():
+            formulario.save()
+            return redirect('categorias_index')
+    else:
+        formulario = CategoriaFormValidado(instance=categoria)
+    return render(request,'cac/administracion/categorias/editar.html',{'formulario':formulario})
+    
+
+def categorias_eliminar(request,id_categoria):
+    try:
+        categoria = Categoria.objects.get(pk=id_categoria)
+    except Categoria.DoesNotExist:
+        return render(request,'cac/administracion/404_admin.html')
+    categoria.soft_delete()
+    return redirect('categorias_index')
+
+
+class CategoriasListView(ListView):
+    model = Categoria
+    context_object_name = 'lista_categorias'
+    template_name= 'cac/administracion/categorias/index.html'
+    queryset= Categoria.objects.filter(baja=False)
+    ordering = ['nombre']
+
+
+class CategoriasView(View):
+    form_class = CategoriaFormValidado
+    template_name = 'cac/administracion/categorias/nuevo.html'
+
+    def get(self, request,*args, **kwargs):
+        form = self.form_class()
+        return render(request,self.template_name,{'formulario':form})
+    
+    def post(self,request,*args, **kwargs):
+        form = self.form_class(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('categorias_index')
+        return render(request,self.template_name,{'formulario':form})
+
+
 def hola_mundo(request):
     return HttpResponse('Hola Mundo Django')
 
@@ -122,3 +191,31 @@ def cursos(request, nombre):
     return HttpResponse(f"""
         <h2>{nombre}</h2>
     """)
+
+
+
+def categorias_index(request):
+    #queryset
+    categorias = Categoria.objects.filter(baja=False)
+    return render(request,'cac/administracion/categorias/index.html',{'categorias':categorias})
+
+def categorias_nuevo(request):
+    if(request.method=='POST'):
+        formulario = CategoriaForm(request.POST)
+        if formulario.is_valid():
+            nombre = formulario.cleaned_data['nombre']
+            nueva_categoria = Categoria(nombre=nombre)
+            nueva_categoria.save()
+            return redirect('categorias_index')
+    else:
+        formulario = CategoriaForm()
+    return render(request,'cac/administracion/categorias/nuevo.html',{'formulario':formulario})
+
+
+def categorias_eliminar(request,id_categoria):
+    try:
+        categoria = Categoria.objects.get(pk=id_categoria)
+    except Categoria.DoesNotExist:
+        return render(request,'cac/administracion/404_admin.html')
+    categoria.soft_delete()
+    return redirect('categorias_index')
